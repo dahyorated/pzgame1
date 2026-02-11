@@ -179,9 +179,13 @@ let S = {
 };
 
 let renderQueued = false;
+const TYPING_KEYS = ['name','join','secret','guess'];
 function up(o) {
   Object.assign(S, o);
   if (o.name !== undefined) localStorage.setItem('nd_name', S.name);
+  // Skip full re-render when only typing in inputs — prevents focus loss
+  const onlyTyping = Object.keys(o).every(k => TYPING_KEYS.includes(k));
+  if (onlyTyping && Object.keys(o).length > 0) return;
   if (!renderQueued) {
     renderQueued = true;
     requestAnimationFrame(() => { renderQueued = false; render(); });
