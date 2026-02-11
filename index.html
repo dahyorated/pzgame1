@@ -196,15 +196,21 @@ const me = () => S.G ? (S.role===1 ? S.G.player1 : S.G.player2) : null;
 const opp = () => S.G ? (S.role===1 ? S.G.player2 : S.G.player1) : null;
 
 // ── Game Actions ──
+function getHomeInputs() {
+  const nameEl = document.getElementById('name-inp');
+  const joinEl = document.getElementById('join-inp');
+  return { name: (nameEl?.value ?? '').trim(), join: (joinEl?.value ?? '').trim().toUpperCase() };
+}
 async function create() {
-  if (!S.name.trim()) { up({err:'Enter your name!'}); return; }
+  const { name } = getHomeInputs();
+  if (!name) { up({err:'Enter your name!'}); return; }
   if (!fbOk) { up({err:'Firebase not connected. Check config.'}); return; }
-  up({loading:true, err:''});
+  up({loading:true, err:'', name});
   try {
     const id = Math.random().toString(36).substring(2,8).toUpperCase();
     const G = {
       digits: S.digits,
-      player1: { name: S.name.trim(), secret: '', guesses: false, revealed: false },
+      player1: { name, secret: '', guesses: false, revealed: false },
       player2: false,
       currentTurn: 1, status: 'waiting', winner: 0, ts: Date.now()
     };
@@ -217,16 +223,17 @@ async function create() {
 }
 
 async function join() {
-  if (!S.name.trim()) { up({err:'Enter your name!'}); return; }
-  if (!S.join.trim()) { up({err:'Enter game code!'}); return; }
+  const { name, join: joinCode } = getHomeInputs();
+  if (!name) { up({err:'Enter your name!'}); return; }
+  if (!joinCode) { up({err:'Enter game code!'}); return; }
   if (!fbOk) { up({err:'Firebase not connected. Check config.'}); return; }
-  up({loading:true, err:''});
+  up({loading:true, err:'', name, join: joinCode});
   try {
-    const id = S.join.trim().toUpperCase();
+    const id = joinCode;
     const G = await DB.read(id);
     if (!G) { up({err:'Game not found! Double-check the code.', loading:false}); return; }
     if (G.player2) { up({err:'Game is already full!', loading:false}); return; }
-    G.player2 = { name: S.name.trim(), secret: '', guesses: false, revealed: false };
+    G.player2 = { name, secret: '', guesses: false, revealed: false };
     G.status = 'setting_secrets';
     await DB.write(id, G);
     up({gid:id, role:2, digits:G.digits, G, scr:'set_secret', loading:false, err:''});
@@ -339,6 +346,7 @@ function h(tag,a,...ch){
     if(k==='style'&&typeof v==='object')Object.assign(el.style,v);
     else if(k.startsWith('on'))el.addEventListener(k.slice(2).toLowerCase(),v);
     else if(k==='className')el.className=v;
+    else if((k==='value'||k==='defaultValue')&&(tag==='input'||tag==='textarea'))el.value=v??'';
     else el.setAttribute(k,v);
   });
   ch.flat().forEach(c=>{if(c!=null)el.appendChild(typeof c==='string'?document.createTextNode(c):c);});
@@ -403,18 +411,19 @@ function render(){
         h('p',{style:{color:'var(--tx2)',fontSize:'15px',marginTop:'6px'}},'The number guessing showdown')),
       h('div',{className:'card fade-up'},
         h('div',{className:'label'},'Your Name'),
-        h('input',{className:'inp',placeholder:'Enter your name',value:S.name,
-          onInput:e=>up({name:e.target.value,err:''})}),
+        h('input',{id:'name-inp',className:'inp',placeholder:'Enter your name',value:S.name}),
         h('div',{className:'label',style:{marginTop:'20px'}},'Number of Digits'),
         h('div',{className:'chips'},
-          ...[3,4,5,6].map(n=>h('button',{className:`chip ${S.digits===n?'on':''}`,onClick:()=>up({digits:n})},`${n}`))),
+          ...[3,4,5,6].map(n=>h('button',{className:`chip ${S.digits===n?'on':''}`,onClick:()=>{
+            const {name,join}=getHomeInputs();
+            up({digits:n,name,join});
+          }},`${n}`))),
         h('button',{className:'btn btn-go',style:{marginTop:'20px'},disabled:S.loading,onClick:create},
           S.loading?'Creating...':'Create New Game'),
         h('div',{className:'divider'},'OR JOIN A GAME'),
         h('div',{style:{display:'flex',gap:'8px'}},
-          h('input',{className:'inp mono',style:{letterSpacing:'6px',textAlign:'center',textTransform:'uppercase',fontSize:'18px'},
+          h('input',{id:'join-inp',className:'inp mono',style:{letterSpacing:'6px',textAlign:'center',textTransform:'uppercase',fontSize:'18px'},
             placeholder:'GAME CODE',maxLength:'6',value:S.join,
-            onInput:e=>up({join:e.target.value.toUpperCase(),err:''}),
             onKeydown:e=>{if(e.key==='Enter')join();}}),
           h('button',{className:'btn btn-out',style:{width:'auto',flexShrink:'0'},disabled:S.loading,onClick:join},
             S.loading?'...':'Join')),
