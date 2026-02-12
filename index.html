@@ -457,9 +457,9 @@ function render(){
         h('p',{style:{color:'var(--tx2)',fontSize:'14px',marginBottom:'24px'}},
           `Pick a ${S.digits}-digit number for ${o?.name||'your opponent'} to guess`),
         h('input',{className:'inp dig-inp',type:'tel',maxLength:S.digits,placeholder:'•'.repeat(S.digits),value:S.secret,
-          onInput:e=>{const v=e.target.value.replace(/[^0-9]/g,'');if(v.length<=S.digits)up({secret:v});},
+          onInput:e=>{const v=e.target.value.replace(/[^0-9]/g,'');if(v.length<=S.digits){up({secret:v});const b=document.getElementById('lock-secret-btn');if(b)b.disabled=v.length!==S.digits||S.loading;}},
           onKeydown:e=>{if(e.key==='Enter'&&S.secret.length===S.digits)lockSecret();}}),
-        h('button',{className:'btn btn-go',style:{marginTop:'16px'},disabled:S.secret.length!==S.digits||S.loading,onClick:lockSecret},
+        h('button',{id:'lock-secret-btn',className:'btn btn-go',style:{marginTop:'16px'},disabled:S.secret.length!==S.digits||S.loading,onClick:lockSecret},
           S.loading?'Locking...':'🔒 Lock In Secret'),
         S.err?h('div',{className:'error'},S.err):null)));
     setTimeout(()=>{const i=root.querySelector('.dig-inp');if(i)i.focus();},100);
@@ -535,9 +535,9 @@ function render(){
           lay.appendChild(h('div',{className:'actbar'},
             h('div',{className:'ginrow'},
               h('input',{className:'inp dig-inp',type:'tel',maxLength:S.digits,placeholder:'•'.repeat(S.digits),value:S.guess,
-                onInput:e=>{const v=e.target.value.replace(/[^0-9]/g,'');if(v.length<=S.digits)up({guess:v});},
+                onInput:e=>{const v=e.target.value.replace(/[^0-9]/g,'');if(v.length<=S.digits){up({guess:v});const b=document.getElementById('send-guess-btn');if(b)b.disabled=v.length!==S.digits||S.loading;}},
                 onKeydown:e=>{if(e.key==='Enter'&&S.guess.length===S.digits)sendGuess();}}),
-              h('button',{className:'btn btn-acc',disabled:S.guess.length!==S.digits||S.loading,onClick:sendGuess},
+              h('button',{id:'send-guess-btn',className:'btn btn-acc',disabled:S.guess.length!==S.digits||S.loading,onClick:sendGuess},
                 S.loading?'...':'→')),
             S.err?h('div',{className:'error'},S.err):null));
         } else if(needFb){
