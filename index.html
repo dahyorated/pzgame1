@@ -249,6 +249,7 @@ function onGameUpdate(G) {
   // Screen transitions
   if (S.scr==='waiting' && G.player2) u.scr = 'set_secret';
   if (S.scr==='waiting_secret' && G.status==='playing') { u.scr='playing'; u.tab='my'; }
+  if ((S.scr==='playing'||S.showWin) && G.status==='setting_secrets') { u.scr='set_secret'; u.showWin=false; }
   // Check opponent needs feedback
   const o = S.role===1 ? G.player2 : G.player1;
   if (o && S.scr==='playing') {
@@ -325,6 +326,26 @@ async function doReveal() {
 }
 
 function restart() { DB.stop(); Object.assign(S,{scr:'home',gid:'',join:'',role:0,digits:4,secret:'',guess:'',tab:'my',revealed:false,opRev:false,fbP:0,fbN:0,err:'',G:null,showWin:false,loading:false}); render(); }
+
+async function playAgain() {
+  if (!S.G || !fbOk) return;
+  up({loading:true, showWin:false});
+  try {
+    const G = {
+      ...S.G,
+      player1: { ...S.G.player1, secret: '', guesses: false, revealed: false },
+      player2: S.G.player2 ? { ...S.G.player2, secret: '', guesses: false, revealed: false } : false,
+      status: 'setting_secrets',
+      currentTurn: 1,
+      winner: 0,
+      ts: Date.now()
+    };
+    await DB.write(S.gid, G);
+    up({G, secret:'', guess:'', tab:'my', revealed:false, opRev:false, fbP:0, fbN:0, scr:'set_secret', loading:false});
+  } catch(e) {
+    up({err:'Failed to rematch: '+e.message, loading:false});
+  }
+}
 
 function toast(msg) {
   const t=document.createElement('div'); t.className='copied-toast'; t.textContent=msg;
@@ -552,7 +573,7 @@ function render(){
       }
     } else {
       lay.appendChild(h('div',{className:'actbar'},
-        h('button',{className:'btn btn-go',onClick:restart},'🔄 New Game')));
+        h('button',{className:'btn btn-go',disabled:S.loading,onClick:playAgain},S.loading?'Creating...':'🔄 New Game')));
     }
 
     root.appendChild(lay);
@@ -567,7 +588,7 @@ function render(){
           h('div',{style:{color:'var(--tx2)',fontSize:'15px',margin:'8px 0 28px'}},
             didIWin?`You cracked ${o?.name}'s number in ${mG.length} guesses!`
               :`${o?.name} cracked your number in ${oG.length} guesses`),
-          h('button',{className:'btn btn-go',onClick:e=>{e.stopPropagation();restart();}},'Play Again'),
+          h('button',{className:'btn btn-go',disabled:S.loading,onClick:e=>{e.stopPropagation();playAgain();}},S.loading?'Creating...':'Play Again'),
           h('button',{className:'btn btn-out',style:{marginTop:'8px'},onClick:e=>{e.stopPropagation();up({showWin:false});}},'View Board'))));
     }
 
