@@ -186,6 +186,10 @@ function up(o) {
   // Skip full re-render when only typing in inputs — prevents focus loss
   const onlyTyping = Object.keys(o).every(k => TYPING_KEYS.includes(k));
   if (onlyTyping && Object.keys(o).length > 0) return;
+  // Skip re-render if guess input is focused (prevents keyboard dismiss on mobile)
+  // unless it's a screen change or critical state update
+  const hasScreenChange = o.scr !== undefined || o.showWin !== undefined || o.tab !== undefined;
+  if (!hasScreenChange && document.activeElement?.classList.contains('dig-inp') && document.activeElement.closest('.actbar')) return;
   if (!renderQueued) {
     renderQueued = true;
     requestAnimationFrame(() => { renderQueued = false; render(); });
@@ -458,11 +462,17 @@ function render(){
 
   // WAITING
   if(S.scr==='waiting'){
+    const shareBtn = navigator.share
+      ? h('button',{className:'btn btn-go',style:{marginTop:'16px'},onClick:()=>{
+          navigator.share({title:'NUM●DUEL',text:`Join my NUM●DUEL game! Code: ${S.gid}`,url:window.location.href}).catch(()=>{});
+        }},'📤 Share Code')
+      : h('button',{className:'btn btn-out',style:{marginTop:'16px'},onClick:()=>{navigator.clipboard?.writeText(S.gid);toast('Code copied!');}},'📋 Copy Code');
     root.appendChild(h('div',{className:'screen'},
       h('div',{className:'card fade-up',style:{textAlign:'center'}},
         h('div',{className:'code',onClick:()=>{navigator.clipboard?.writeText(S.gid);toast('Code copied!');}},S.gid),
         h('p',{style:{color:'var(--tx2)',fontSize:'14px',marginTop:'14px'}},'Share this code with your partner'),
         h('p',{style:{color:'var(--tx2)',fontSize:'13px',marginTop:'4px'}},'Tap code to copy • Waiting for them to join...'),
+        shareBtn,
         h('div',{style:{marginTop:'20px'}},h('div',{className:'pdot'})),
         h('p',{style:{fontSize:'12px',color:'var(--tx2)',marginTop:'16px'}},`${S.digits}-digit game • Game ID: ${S.gid}`))));
     return;
